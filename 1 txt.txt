@@ -1,0 +1,114 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from groq import Groq
+
+# -----------------------------
+# Page Config
+# -----------------------------
+st.set_page_config(page_title="MarketMind AI", layout="wide")
+
+st.title("📊 MarketMind")
+st.subheader("Generative AI–Powered Sales & Marketing Intelligence Platform")
+
+# -----------------------------
+# Groq API Setup
+# -----------------------------
+groq_api_key = st.sidebar.text_input("Enter Groq API Key", type="password")
+
+if groq_api_key:
+    client = Groq(api_key=groq_api_key)
+
+# -----------------------------
+# File Upload
+# -----------------------------
+uploaded_file = st.file_uploader("Upload Sales / Marketing Dataset", type=["csv"])
+
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+
+    st.success("Dataset Uploaded Successfully")
+
+    st.write("### Dataset Preview")
+    st.dataframe(df.head())
+
+    # -----------------------------
+    # Data Visualization
+    # -----------------------------
+    st.write("### 📈 Sales Trends")
+
+    numeric_cols = df.select_dtypes(include='number').columns
+
+    if len(numeric_cols) > 0:
+        col = st.selectbox("Select Metric", numeric_cols)
+
+        fig = px.line(df, y=col, title=f"{col} Trend")
+        st.plotly_chart(fig, use_container_width=True)
+
+    # -----------------------------
+    # AI Insights Generation
+    # -----------------------------
+    st.write("### 🤖 Generate AI Insights")
+
+    if st.button("Generate Insights") and groq_api_key:
+
+        data_summary = df.describe().to_string()
+
+        prompt = f"""
+        You are a marketing analytics expert.
+
+        Based on the dataset summary below generate:
+        - Key sales insights
+        - Customer behavior patterns
+        - Marketing opportunities
+        - Actionable strategies
+
+        Dataset summary:
+        {data_summary}
+        """
+
+        response = client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        insights = response.choices[0].message.content
+
+        st.write("### 📊 AI Generated Insights")
+        st.write(insights)
+
+    # -----------------------------
+    # Marketing Strategy Generator
+    # -----------------------------
+    st.write("### 🚀 AI Marketing Strategy Generator")
+
+    industry = st.text_input("Industry")
+    target_audience = st.text_input("Target Audience")
+
+    if st.button("Generate Strategy") and groq_api_key:
+
+        prompt = f"""
+        Create a digital marketing strategy for:
+
+        Industry: {industry}
+        Target Audience: {target_audience}
+
+        Include:
+        - Social media strategy
+        - Content marketing ideas
+        - Paid ads strategy
+        - Growth hacks
+        """
+
+        response = client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        strategy = response.choices[0].message.content
+
+        st.write("### 📢 AI Marketing Strategy")
+        st.write(strategy)
+
+else:
+    st.info("Upload a CSV dataset to begin analysis.")
